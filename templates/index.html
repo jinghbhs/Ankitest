@@ -579,7 +579,12 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
+                return response.json();
+            })
             .then(data => {
                 sessionId = data.session_id;
                 sentenceCount = 0;
@@ -599,7 +604,12 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ session_id: sessionId })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.error) { alert('导出失败: ' + data.error); return; }
                 window.location.href = '/download/' + data.filename;
@@ -825,6 +835,7 @@
                         synonyms_info: synonymsInfo,
                     })
                 });
+                if (!r.ok) throw new Error('HTTP ' + r.status);
                 const data = await r.json();
                 if (!data.error) {
                     sentenceCount++;
@@ -924,7 +935,12 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ session_id: sessionId })
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data.error) { alert('撤销失败: ' + data.error); return; }
                 sentenceCount--;
@@ -1251,7 +1267,10 @@
 
         // 启动时检查可恢复会话
         fetch('/recover_sessions')
-            .then(r => r.json())
+            .then(r => {
+                if (!r.ok) return [];
+                return r.json();
+            })
             .then(sessions => {
                 const dismissed = new Set(JSON.parse(localStorage.getItem('dismissedSessions') || '[]'));
                 const visible = sessions.filter(s => !dismissed.has(s.session_id));
