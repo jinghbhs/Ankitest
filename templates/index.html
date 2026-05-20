@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anki句子分析工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            justify-content: center;
+        }
+
+        button {
+            padding: 12px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .btn-start {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-start:hover {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+
+        .btn-end {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-end:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+        }
+
+        .btn-end:disabled, .btn-start:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-undo {
+            background: #f59e0b;
+            color: white;
+            margin-top: 12px;
+            width: 100%;
+        }
+
+        .btn-undo:hover {
+            background: #d97706;
+            transform: translateY(-2px);
+        }
+
+        .streaming-box {
+            background: #f0f4ff;
+            border: 2px solid #c7d2fe;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .streaming-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .streaming-header span {
+            font-weight: 600;
+            color: #4338ca;
+            font-size: 16px;
+        }
+
+        .streaming-text {
+            font-family: inherit;
+            font-size: 13px;
+            color: #374151;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 260px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 12px;
+            line-height: 1.5;
+        }
+
+        .btn-stop {
+            background: #ef4444;
+            color: white;
+            padding: 8px 18px;
+            font-size: 14px;
+        }
+
+        .btn-stop:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+        }
+
+        .btn-compose {
+            background: #8b5cf6;
+            color: white;
+        }
+
+        .btn-compose:hover {
+            background: #7c3aed;
+            transform: translateY(-2px);
+        }
+
+        .compose-panel {
+            background: #faf5ff;
+            border: 2px solid #ddd6fe;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .compose-panel h3 {
+            color: #6d28d9;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+
+        .compose-panel textarea {
+            border-color: #ddd6fe;
+            min-height: 70px;
+        }
+
+        .compose-panel textarea:focus {
+            border-color: #8b5cf6;
+        }
+
+        .compose-hint {
+            font-size: 13px;
+            color: #7c3aed;
+            margin-bottom: 8px;
+        }
+
+        .btn-generate {
+            background: #8b5cf6;
+            color: white;
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        .btn-generate:hover {
+            background: #7c3aed;
+            transform: translateY(-2px);
+        }
+
+        .btn-generate:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .generated-list {
+            margin-top: 16px;
+        }
+
+        .generated-item {
+            background: white;
+            border: 1px solid #ddd6fe;
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+        }
+
+        .generated-item .word-tag {
+            display: inline-block;
+            background: #ede9fe;
+            color: #6d28d9;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-bottom: 6px;
+        }
+
+        .generated-item .sentence-text {
+            color: #1f2937;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        .generated-actions {
+            margin-top: 14px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .generated-actions p {
+            color: #374151;
+            font-size: 14px;
+        }
+
+        .queue-progress {
+            text-align: center;
+            padding: 10px;
+            color: #6d28d9;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .error-reasons {
+            margin-top: 12px;
+            padding: 12px;
+            background: #fff7ed;
+            border-radius: 6px;
+        }
+
+        .error-reasons h4 {
+            color: #9a3412;
+            margin-bottom: 6px;
+        }
+
+        .error-reasons p {
+            color: #7c2d12;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .suggested-box {
+            margin-top: 12px;
+            padding: 12px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 6px;
+        }
+
+        .suggested-box h4 {
+            color: #15803d;
+            margin-bottom: 6px;
+        }
+
+        .suggested-text {
+            font-size: 16px;
+            color: #166534;
+            font-weight: 500;
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
+        .suggested-question {
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        .suggested-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-yes {
+            background: #10b981;
+            color: white;
+            padding: 8px 18px;
+            font-size: 14px;
+        }
+
+        .btn-yes:hover {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+
+        .btn-no {
+            background: #6b7280;
+            color: white;
+            padding: 8px 18px;
+            font-size: 14px;
+        }
+
+        .btn-no:hover {
+            background: #4b5563;
+            transform: translateY(-2px);
+        }
+
+        .language-selector {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .language-selector label {
+            margin-right: 20px;
+            font-size: 16px;
+        }
+
+        .language-selector input[type="radio"] {
+            margin-right: 5px;
+        }
+
+        .input-area {
+            margin-bottom: 30px;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 15px;
+            font-size: 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            resize: vertical;
+            min-height: 120px;
+            font-family: inherit;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-analyze {
+            width: 100%;
+            padding: 15px;
+            background: #667eea;
+            color: white;
+            font-size: 18px;
+            margin-top: 15px;
+        }
+
+        .btn-analyze:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .btn-analyze:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .status.inactive {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status.active {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .error-box {
+            background: #fef2f2;
+            border: 2px solid #fecaca;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .error-box h3 {
+            color: #dc2626;
+            margin-bottom: 10px;
+        }
+
+        .error-box ul {
+            margin-left: 20px;
+            color: #991b1b;
+        }
+
+        .error-box button {
+            margin-top: 15px;
+            background: #dc2626;
+            color: white;
+        }
+
+        .result-box {
+            background: #f0fdf4;
+            border: 2px solid #bbf7d0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .result-box h3 {
+            color: #15803d;
+            margin-bottom: 15px;
+        }
+
+        .result-section {
+            margin-bottom: 15px;
+        }
+
+        .result-section h4 {
+            color: #166534;
+            margin-bottom: 8px;
+        }
+
+        .result-section p {
+            color: #14532d;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .sentence-count {
+            text-align: center;
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .meanings-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .btn-meaning {
+            background: #fff7ed;
+            color: #c2410c;
+            border: 1px solid #fed7aa;
+            border-radius: 6px;
+            padding: 5px 12px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-meaning:hover {
+            background: #ffedd5;
+            border-color: #fb923c;
+            transform: translateY(-1px);
+        }
+
+        .loading {
+            text-align: center;
+            color: #667eea;
+            font-size: 16px;
+            margin-top: 20px;
+        }
+
+        .highlight-target {
+            color: rgb(255, 170, 0);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 Anki句子分析工具</h1>
+
+        <div id="recoverBanner" style="display:none;background:#fef9c3;border:1px solid #fde047;border-radius:10px;padding:16px 20px;margin-bottom:20px;">
+            <div style="font-weight:600;color:#713f12;margin-bottom:10px;">⚠️ 发现未导出的会话，是否恢复？</div>
+            <div id="recoverList"></div>
+        </div>
+
+        <div class="status" id="status">
+            <span id="statusText">未开始会话</span>
+        </div>
+
+        <div class="controls">
+            <button class="btn-start" id="startBtn" onclick="startSession()">开始</button>
+            <button class="btn-end" id="endBtn" onclick="endSession()" disabled>结束并导出</button>
+        </div>
+
+        <div class="sentence-count" id="sentenceCount">已分析句子: 0</div>
+
+        <div class="language-selector">
+            <label>
+                <input type="radio" name="language" value="ja" checked>
+                日语
+            </label>
+            <label>
+                <input type="radio" name="language" value="en">
+                英语
+            </label>
+        </div>
+
+        <div class="language-selector">
+            <label>
+                <input type="radio" name="model" value="gpt-5-mini" checked>
+                gpt-5-mini
+            </label>
+            <label>
+                <input type="radio" name="model" value="gpt-5.2">
+                gpt-5.2
+            </label>
+        </div>
+
+        <div class="input-area">
+            <textarea id="sentenceInput" placeholder="请输入要分析的句子..." disabled></textarea>
+            <button class="btn-analyze" id="analyzeBtn" onclick="analyzeSentence()" disabled>分析句子</button>
+        </div>
+
+        <div style="text-align:center; margin-bottom: 16px;">
+            <button class="btn-compose" id="composeBtn" onclick="toggleComposePanel()" disabled>造句</button>
+        </div>
+
+        <div class="compose-panel" id="composePanel" style="display:none;">
+            <h3>✏️ AI 造句</h3>
+            <p class="compose-hint">输入单词或短语，多个用 / 隔开，例如：ありがとう / すみません</p>
+            <textarea id="composeInput" placeholder="输入单词或短语..."></textarea>
+            <div id="synonymsModeRow" style="display:none;margin:10px 0;font-size:13px;color:#6d28d9;">
+                <span style="margin-right:12px;font-weight:600;">近义词辨析模式：</span>
+                <label style="margin-right:16px;cursor:pointer;">
+                    <input type="radio" name="synonymsMode" value="auto" checked> AI 自动判断
+                </label>
+                <label style="margin-right:16px;cursor:pointer;">
+                    <input type="radio" name="synonymsMode" value="force"> 直接视为近义词
+                </label>
+                <label style="cursor:pointer;">
+                    <input type="radio" name="synonymsMode" value="separate"> 不判断近义词，分开造句
+                </label>
+            </div>
+            <button class="btn-generate" id="generateBtn" onclick="generateSentences()">生成句子</button>
+            <div id="generatedArea"></div>
+        </div>
+
+        <div id="resultArea"></div>
+    </div>
+
+    <script>
+        let sessionId = null;
+        let sentenceCount = 0;
+        let streamController = null;
+        let currentSentence = null;
+        let lastAnalysisResult = null;
+        let currentTargetWord = null;
+        let currentSentenceForHighlight = null;  // 当前分析的原句（用于变形高亮）
+        let analyzeQueue = [];
+        let queueTotal = 0;
+        let pendingGeneratedSentences = [];
+        let currentSynonymsInfo = null;
+        let cachedSynonymsAnalysis = null;  // 缓存第一个句子的近义词辨析
+
+        function startSession() {
+            fetch('/start_session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+            .then(response => response.json())
+            .then(data => {
+                sessionId = data.session_id;
+                sentenceCount = 0;
+                updateUI(true);
+                updateSentenceCount();
+                document.getElementById('resultArea').innerHTML = '';
+            })
+            .catch(error => { alert('启动会话失败: ' + error); });
+        }
+
+        function endSession() {
+            if (!sessionId) return;
+            if (!confirm('确定要结束会话并导出文件吗？')) return;
+
+            fetch('/end_session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: sessionId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) { alert('导出失败: ' + data.error); return; }
+                window.location.href = '/download/' + data.filename;
+                sessionId = null;
+                sentenceCount = 0;
+                updateUI(false);
+                updateSentenceCount();
+                document.getElementById('sentenceInput').value = '';
+                document.getElementById('resultArea').innerHTML = '';
+            })
+            .catch(error => { alert('导出失败: ' + error); });
+        }
+
+        function analyzeSentence(overrideSentence, targetWord, synonymsInfo, reuseSynonyms) {
+            const sentence = overrideSentence || document.getElementById('sentenceInput').value.trim();
+            const language = document.querySelector('input[name="language"]:checked').value;
+            const model = document.querySelector('input[name="model"]:checked').value;
+            const _synonymsInfo = synonymsInfo ?? currentSynonymsInfo;
+
+            if (!sentence) { alert('请输入句子'); return; }
+            if (!sessionId) { alert('请先开始会话'); return; }
+
+            currentSentenceForHighlight = sentence;
+            currentTargetWord = targetWord || null;
+
+            currentSentence = sentence;
+            currentTargetWord = targetWord || null;
+            lastAnalysisResult = null;
+            document.getElementById('analyzeBtn').disabled = true;
+            showStreamingBox();
+
+            streamController = new AbortController();
+
+            const payload = { session_id: sessionId, sentence, language, model, target_word: currentTargetWord, synonyms_info: _synonymsInfo || null };
+            if (reuseSynonyms) payload.reuse_synonyms = reuseSynonyms;
+
+            fetch('/analyze_stream', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+                signal: streamController.signal
+            })
+            .then(response => {
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                function readChunk() {
+                    return reader.read().then(({ done, value }) => {
+                        if (done) {
+                            // 流结束时必须 drain buffer，处理末尾可能不完整的最后一条 SSE 消息
+                            if (buffer.length > 0) {
+                                const remaining = buffer.trim();
+                                if (remaining.startsWith('data: ')) {
+                                    try {
+                                        handleStreamEvent(JSON.parse(remaining.slice(6)));
+                                    } catch (e) {}
+                                }
+                            }
+                            return;
+                        }
+                        buffer += decoder.decode(value, { stream: true });
+                        const parts = buffer.split('\n\n');
+                        buffer = parts.pop();  // 保留可能不完整的最后一个片段
+                        for (const part of parts) {
+                            if (part.startsWith('data: ')) {
+                                try {
+                                    handleStreamEvent(JSON.parse(part.slice(6)));
+                                } catch (e) {}
+                            }
+                        }
+                        return readChunk();
+                    });
+                }
+                return readChunk();
+            })
+            .catch(err => {
+                if (err.name !== 'AbortError') {
+                    document.getElementById('analyzeBtn').disabled = false;
+                    document.getElementById('resultArea').innerHTML = '';
+                    alert('分析失败: ' + err);
+                }
+            });
+        }
+
+        function showStreamingBox() {
+            document.getElementById('resultArea').innerHTML = `
+                <div class="streaming-box">
+                    <div class="streaming-header">
+                        <span>⏳ 正在分析中...</span>
+                        <button class="btn-stop" onclick="stopStream()">停止并撤销</button>
+                    </div>
+                    <pre id="streamingText" class="streaming-text"></pre>
+                </div>
+            `;
+        }
+
+        function appendStreamText(text) {
+            const el = document.getElementById('streamingText');
+            if (el) {
+                el.textContent += text;
+                el.scrollTop = el.scrollHeight;
+            }
+        }
+
+        function stopStream() {
+            if (streamController) {
+                streamController.abort();
+                streamController = null;
+            }
+            document.getElementById('analyzeBtn').disabled = false;
+            document.getElementById('resultArea').innerHTML = '';
+        }
+
+        function handleStreamEvent(data) {
+            if (data.type === 'start') {
+                const header = document.querySelector('.streaming-header span');
+                if (header) header.textContent = '⚡ 已连接，正在生成...';
+            } else if (data.type === 'chunk') {
+                appendStreamText(data.content);
+            } else if (data.type === 'fixing') {
+                const header = document.querySelector('.streaming-header span');
+                if (header) header.textContent = '⚡ JSON 截断，正在补全...';
+            } else if (data.type === 'fixed') {
+                const result = data.result;
+                streamController = null;
+                document.getElementById('analyzeBtn').disabled = false;
+                if (result.has_errors) {
+                    lastAnalysisResult = result;
+                    showErrors(result);
+                } else {
+                    showResult(result);
+                    document.getElementById('sentenceInput').value = '';
+                    if (analyzeQueue.length > 0) {
+                        setTimeout(processNextInQueue, 300);
+                    }
+                }
+            } else if (data.type === 'done') {
+                streamController = null;
+                document.getElementById('analyzeBtn').disabled = false;
+                const result = data.result;
+                // 缓存第一个句子的近义词共同辨析供后续复用（不缓存 word_choice_reason）
+                if (result.synonyms_common && !cachedSynonymsAnalysis) {
+                    cachedSynonymsAnalysis = {
+                        synonyms_common: result.synonyms_common,
+                        synonyms_mnemonic: result.synonyms_mnemonic || ''
+                    };
+                }
+                if (result.has_errors) {
+                    lastAnalysisResult = result;
+                    showErrors(result);
+                } else {
+                    showResult(result);
+                    document.getElementById('sentenceInput').value = '';
+                    if (analyzeQueue.length > 0) {
+                        setTimeout(processNextInQueue, 300);
+                    }
+                }
+            } else if (data.type === 'error') {
+                streamController = null;
+                document.getElementById('analyzeBtn').disabled = false;
+                document.getElementById('resultArea').innerHTML = `
+                    <div class="error-box">
+                        <h3>请求出错</h3>
+                        <p>${data.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function showErrors(result) {
+            const errorsHtml = result.errors.map(err => `<li>${err}</li>`).join('');
+            const reasonsHtml = result.error_reasons ? `
+                <div class="error-reasons">
+                    <h4>错误原因：</h4>
+                    <p>${result.error_reasons}</p>
+                </div>` : '';
+            const suggestedHtml = result.suggested_sentence ? `
+                <div class="suggested-box">
+                    <h4>推荐修改为：</h4>
+                    <p class="suggested-text">${result.suggested_sentence}</p>
+                    <p class="suggested-question">是否按推荐句子重新分析？</p>
+                    <div class="suggested-actions">
+                        <button class="btn-yes" onclick="reanalyzeWithSuggested()">是，使用推荐句子</button>
+                        <button class="btn-no" onclick="continueWithOriginal()">否，继续分析原句</button>
+                        <button class="btn-stop" onclick="discardSentence()">否，撤销这一句</button>
+                    </div>
+                </div>` : `
+                <div class="suggested-actions" style="margin-top:12px;">
+                    <button class="btn-stop" onclick="discardSentence()">撤销这一句</button>
+                </div>`;
+
+            document.getElementById('resultArea').innerHTML = `
+                <div class="error-box">
+                    <h3>⚠️ 发现错误</h3>
+                    <ul>${errorsHtml}</ul>
+                    ${reasonsHtml}
+                    ${suggestedHtml}
+                </div>
+            `;
+        }
+
+        function reanalyzeWithSuggested() {
+            if (!lastAnalysisResult || !lastAnalysisResult.suggested_sentence) return;
+            const suggested = lastAnalysisResult.suggested_sentence;
+            const tw = currentTargetWord;
+            document.getElementById('sentenceInput').value = suggested;
+            lastAnalysisResult = null;
+            analyzeSentence(suggested, tw, currentSynonymsInfo);
+        }
+
+        // 共享：保存句子到 session（供多处调用）
+        async function _saveSentenceToSession(sentence, analysis, targetWord, synonymsInfo) {
+            try {
+                const r = await fetch('/save_sentence', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: sessionId,
+                        sentence,
+                        analysis,
+                        target_word: targetWord,
+                        synonyms_info: synonymsInfo,
+                    })
+                });
+                const data = await r.json();
+                if (!data.error) {
+                    sentenceCount++;
+                    updateSentenceCount();
+                    return true;
+                }
+            } catch (e) {
+                console.error('[保存失败]', e);
+            }
+            return false;
+        }
+
+        function continueWithOriginal() {
+            if (!lastAnalysisResult || !currentSentence) return;
+            const analysis = lastAnalysisResult;
+            const sentence = currentSentence;
+            lastAnalysisResult = null;
+            document.getElementById('sentenceInput').value = '';
+
+            _saveSentenceToSession(sentence, analysis, currentTargetWord, currentSynonymsInfo)
+                .then(ok => {
+                    showResult(analysis, false);
+                    if (analyzeQueue.length > 0) {
+                        setTimeout(processNextInQueue, 300);
+                    }
+                });
+        }
+
+        function discardSentence() {
+            lastAnalysisResult = null;
+            currentSentence = null;
+            document.getElementById('resultArea').innerHTML = '';
+            if (analyzeQueue.length > 0) {
+                setTimeout(processNextInQueue, 300);
+            }
+        }
+
+        async function showResult(analysis, autoSave = true) {
+            let synonymsHtml = '';
+            if (analysis.synonyms_common) {
+                let inner = `<p style="color:#713f12;">${analysis.synonyms_common}</p>`;
+                if (analysis.word_choice_reason) {
+                    inner += `<p style="color:#6d28d9;margin-top:10px;font-weight:600;">💡 本句为何选"${currentTargetWord || '该词'}"：</p><p style="color:#6d28d9;">${analysis.word_choice_reason}</p>`;
+                }
+                if (analysis.synonyms_mnemonic) {
+                    inner += `<p style="color:#713f12;margin-top:8px;font-weight:600;">${analysis.synonyms_mnemonic}</p>`;
+                }
+                synonymsHtml = `
+                    <div class="result-section" style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:12px;">
+                        <h4 style="color:#713f12;">近义词共同辨析：</h4>
+                        ${inner}
+                    </div>`;
+            }
+            // 对词汇分析中的目标单词及活用形做变色处理
+            const vocabHtml = _highlightFragments(
+                _stripInternalMarkers(analysis.vocabulary_analysis),
+                analysis.highlighted_fragments
+            );
+            // 对直译/意译中的【H】...【/H】标记做变色处理
+            const litHtml = _applyHighlight(analysis.literal_translation);
+            const freeHtml = _applyHighlight(analysis.free_translation);
+            const html = `
+                <div class="result-box">
+                    <h3>✅ 分析完成</h3>
+                    ${currentSentenceForHighlight ? `<p style="font-size:16px;padding:8px 12px;background:#f5f3ff;border-radius:6px;line-height:1.6;margin-bottom:12px;">${_highlightFragments(currentSentenceForHighlight, analysis.highlighted_fragments)}</p>` : ''}
+                    ${synonymsHtml}
+                    <div class="result-section">
+                        <h4>词汇分析：</h4>
+                        <p>${vocabHtml}</p>
+                    </div>
+                    <div class="result-section">
+                        <h4>语法分析：</h4>
+                        <p>${analysis.grammar_analysis}</p>
+                    </div>
+                    <div class="result-section">
+                        <h4>直译：</h4>
+                        <p>${litHtml}</p>
+                    </div>
+                    <div class="result-section">
+                        <h4>意译：</h4>
+                        <p>${freeHtml}</p>
+                    </div>
+                    <button class="btn-undo" onclick="undoLast()">撤销此条分析</button>
+                </div>
+            `;
+            document.getElementById('resultArea').innerHTML = html;
+
+            // 保存到 session（autoSave=false 时跳过，避免 continueWithOriginal 重复保存）
+            if (autoSave) {
+                await _saveSentenceToSession(currentSentence, analysis, currentTargetWord, currentSynonymsInfo);
+            }
+        }
+
+        function undoLast() {
+            fetch('/undo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: sessionId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) { alert('撤销失败: ' + data.error); return; }
+                sentenceCount--;
+                updateSentenceCount();
+                document.getElementById('resultArea').innerHTML = '';
+            })
+            .catch(error => { alert('撤销失败: ' + error); });
+        }
+
+        function updateUI(isActive) {
+            const status = document.getElementById('status');
+            const statusText = document.getElementById('statusText');
+            const startBtn = document.getElementById('startBtn');
+            const endBtn = document.getElementById('endBtn');
+            const sentenceInput = document.getElementById('sentenceInput');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const composeBtn = document.getElementById('composeBtn');
+
+            if (isActive) {
+                status.className = 'status active';
+                statusText.textContent = '会话进行中';
+                startBtn.disabled = true;
+                endBtn.disabled = false;
+                sentenceInput.disabled = false;
+                analyzeBtn.disabled = false;
+                composeBtn.disabled = false;
+            } else {
+                status.className = 'status inactive';
+                statusText.textContent = '未开始会话';
+                startBtn.disabled = false;
+                endBtn.disabled = true;
+                sentenceInput.disabled = true;
+                analyzeBtn.disabled = true;
+                composeBtn.disabled = true;
+                document.getElementById('composePanel').style.display = 'none';
+            }
+        }
+
+        function toggleComposePanel() {
+            const panel = document.getElementById('composePanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function generateSentences() {
+            const raw = document.getElementById('composeInput').value.trim();
+            if (!raw) { alert('请输入单词或短语'); return; }
+
+            const words = raw.split('/').map(w => w.trim()).filter(w => w);
+            if (!words.length) { alert('请输入有效的单词或短语'); return; }
+
+            const language = document.querySelector('input[name="language"]:checked').value;
+            const model = document.querySelector('input[name="model"]:checked').value;
+            const synonymsMode = words.length >= 2
+                ? document.querySelector('input[name="synonymsMode"]:checked').value
+                : 'none';
+
+            document.getElementById('generateBtn').disabled = true;
+            document.getElementById('generatedArea').innerHTML = '<div class="loading">正在造句中...</div>';
+
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), 300000);  // 5分钟
+
+            fetch('/generate_sentences', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ words, language, model, synonyms_mode: synonymsMode }),
+                signal: ctrl.signal
+            })
+            .then(r => r.ok ? r.json().catch(err => { throw Object.assign(new Error('JSON解析失败: ' + (err.message || String(err))), { isFetchError: true }); }) : r.text().then(t => { throw Object.assign(new Error('请求失败: ' + r.status + ' ' + r.statusText + (t ? ' ' + t.slice(0, 200) : '')), { isFetchError: true }); }))
+            .then(data => {
+                clearTimeout(timer);
+                document.getElementById('generateBtn').disabled = false;
+                if (data.error) {
+                    document.getElementById('generatedArea').innerHTML = `<div class="error-box"><p>${data.error}</p></div>`;
+                    return;
+                }
+                showGeneratedResults(data);
+            })
+            .catch(err => {
+                clearTimeout(timer);
+                document.getElementById('generateBtn').disabled = false;
+                const msg = err.name === 'AbortError' ? '造句超时，请重试' : (err.message || String(err));
+                document.getElementById('generatedArea').innerHTML = `<div class="error-box"><p>${msg}</p></div>`;
+            });
+        }
+
+        function showGeneratedResults(data) {
+            const synonymsMode = document.querySelector('input[name="synonymsMode"]:checked').value;
+            // separate 模式：每个句子独立分析，清空同义词信息
+            if (synonymsMode === 'separate') {
+                currentSynonymsInfo = null;
+            }
+            let results = Array.isArray(data) ? data : (data.results || []);
+            let synonymsInfo = synonymsMode === 'separate' ? null : ((!Array.isArray(data) && data.synonyms_info) ? data.synonyms_info : null);
+            let relationInfo = (!Array.isArray(data) && data.relation_detected) ? data : null;
+
+            const valid = results.filter(r => r.valid);
+            const invalid = results.filter(r => !r.valid);
+
+            let html = '<div class="generated-list">';
+
+            // 词间关系提示（优先用 synonyms_info，其次用 relation_detected）
+            if (synonymsInfo) {
+                const wStr = (synonymsInfo.words || []).map(w => `<strong>${w}</strong>`).join('、');
+                currentSynonymsInfo = synonymsInfo;
+                const relType = synonymsInfo.relation_type;
+                if (relType === 'no_relation') {
+                    html += `<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#9a3412;">
+                        ⚠️ ${wStr} 之间没有近义词关系：${synonymsInfo.relation_note || ''}
+                        <div style="margin-top:6px;">💡 建议分开造句</div>
+                    </div>`;
+                } else {
+                    html += `<div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#713f12;">
+                        💡 检测到近义词/相关词：${wStr}（${synonymsInfo.relation_note || ''}），分析时将自动加入近义词辨析
+                    </div>`;
+                }
+            } else if (relationInfo) {
+                const wStr = (relationInfo.words || []).map(w => `<strong>${w}</strong>`).join('、');
+                currentSynonymsInfo = { words: relationInfo.words, relation_type: relationInfo.relation_type, relation_note: relationInfo.relation_note };
+                if (relationInfo.relation_type === 'no_relation') {
+                    html += `<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#9a3412;">
+                        ⚠️ ${wStr} 之间没有近义词关系：${relationInfo.relation_note || ''}
+                        <div style="margin-top:6px;">💡 ${relationInfo.suggestion || '建议分开造句'}</div>
+                    </div>`;
+                } else {
+                    html += `<div style="background:#fef9c3;border:1px solid #fde047;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#713f12;">
+                        💡 检测到近义词/相关词：${wStr}（${relationInfo.relation_note || ''}），分析时将自动加入近义词辨析
+                    </div>`;
+                }
+            }
+
+            // 有效的造句
+            for (const item of valid) {
+                const hint = item.chinese ? `<span style="color:#9ca3af;font-size:12px;margin-left:6px;">${item.chinese}</span>` : '';
+                html += `
+                    <div class="generated-item">
+                        <span class="word-tag">${item.word}</span>${hint}
+                        <div class="sentence-text">${item.sentence}</div>
+                    </div>`;
+            }
+
+            // 无效的（词义不匹配）
+            for (const item of invalid) {
+                const meaningsHtml = (item.meanings || []).map((m, i) =>
+                    `<button class="btn-meaning" onclick="regenWithMeaning('${escHtml(item.word)}', '${escHtml(m)}')">${m}</button>`
+                ).join('');
+                html += `
+                    <div class="generated-item" style="border-color:#fca5a5;">
+                        <span class="word-tag" style="background:#fee2e2;color:#dc2626;">${item.word}</span>
+                        <div style="color:#dc2626;font-size:13px;margin:6px 0;">
+                            ⚠️ "${item.word}" 没有"${item.chinese}"这个意思
+                        </div>
+                        <div style="font-size:13px;color:#374151;margin-bottom:6px;">按推荐意思造句：</div>
+                        <div class="meanings-row">${meaningsHtml}</div>
+                    </div>`;
+            }
+
+            html += '</div>';
+
+            if (valid.length > 0) {
+                html += `
+                    <div class="generated-actions">
+                        <p>是否对这些句子进行分析？</p>
+                        <button class="btn-yes" onclick="startQueuedAnalysis()">是，开始分析</button>
+                        <button class="btn-no" onclick="document.getElementById('generatedArea').innerHTML=''">否</button>
+                    </div>`;
+                pendingGeneratedSentences = valid.map(r => ({sentence: r.sentence, word: r.word, synonymsInfo: currentSynonymsInfo}));
+            } else {
+                pendingGeneratedSentences = [];
+            }
+
+            document.getElementById('generatedArea').innerHTML = html;
+        }
+
+        function regenWithMeaning(word, meaning) {
+            const language = document.querySelector('input[name="language"]:checked').value;
+            const model = document.querySelector('input[name="model"]:checked').value;
+            // 用"word 意思"格式触发按指定意思造句
+            const entry = `${word} ${meaning}`;
+            document.getElementById('generateBtn').disabled = true;
+            document.getElementById('generatedArea').innerHTML = '<div class="loading">正在造句中...</div>';
+            const ctrl2 = new AbortController();
+            const timer2 = setTimeout(() => ctrl2.abort(), 70000);
+            fetch('/generate_sentences', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ words: [entry], language, model }),
+                signal: ctrl2.signal
+            })
+            .then(r => r.ok ? r.json().catch(err => { throw Object.assign(new Error('JSON解析失败: ' + (err.message || String(err))), { isFetchError: true }); }) : r.text().then(t => { throw Object.assign(new Error('请求失败: ' + r.status + ' ' + r.statusText + (t ? ' ' + t.slice(0, 200) : '')), { isFetchError: true }); }))
+            .then(data => {
+                clearTimeout(timer2);
+                document.getElementById('generateBtn').disabled = false;
+                if (data.error) {
+                    document.getElementById('generatedArea').innerHTML = `<div class="error-box"><p>${data.error}</p></div>`;
+                    return;
+                }
+                showGeneratedResults(data);
+            })
+            .catch(err => {
+                clearTimeout(timer2);
+                document.getElementById('generateBtn').disabled = false;
+                const msg = err.name === 'AbortError' ? '造句超时，请重试' : (err.message || String(err));
+                document.getElementById('generatedArea').innerHTML = `<div class="error-box"><p>${msg}</p></div>`;
+            });
+        }
+
+        function escHtml(str) {
+            return String(str).replace(/'/g, "\\'").replace(/"/g, '&quot;');
+        }
+
+        function _escRegex(str) {
+            return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        function _applyHighlight(text) {
+            if (!text) return text;
+            return text.replace(/【H】(.*?)【\/H】/g,
+                `<span class="highlight-target">$1</span>`
+            );
+        }
+
+        // 按 AI 报告的 highlighted_fragments 直接在句子里标颜色（最准确，不依赖活用形检测）
+        function _highlightFragments(sentence, fragments) {
+            if (!sentence || !fragments || !fragments.length) return sentence || '';
+            // 先收集所有匹配位置（偏移量基于原句），避免字符串替换后 indexOf 位置错乱
+            const matches = [];
+            for (const frag of fragments) {
+                if (!frag) continue;
+                let pos = 0;
+                while (true) {
+                    const idx = sentence.indexOf(frag, pos);
+                    if (idx === -1) break;
+                    matches.push({ idx, frag });
+                    pos = idx + 1; // 找下一个出现位置
+                }
+            }
+            if (!matches.length) return sentence;
+            // 按位置排序，逐段拼接
+            let result = '';
+            let cur = 0;
+            for (const { idx, frag } of matches) {
+                result += escHtml(sentence.slice(cur, idx));
+                result += `<span class="highlight-target">${escHtml(frag)}</span>`;
+                cur = idx + frag.length;
+            }
+            result += escHtml(sentence.slice(cur));
+            return result;
+        }
+
+        function _stripInternalMarkers(text) {
+            if (!text) return text;
+            // 去除【活用形：XXX】和【H】【/H】等内部标记
+            return text
+                .replace(/【活用形[：:][^】]*】/g, '')
+                .replace(/【H】([^】]*)【\/H】/g, '$1');
+        }
+
+        function startQueuedAnalysis() {
+            analyzeQueue = [...pendingGeneratedSentences];
+            pendingGeneratedSentences = [];
+            queueTotal = analyzeQueue.length;
+            cachedSynonymsAnalysis = null;  // 重置缓存，第一个句子会生成新的
+            document.getElementById('composePanel').style.display = 'none';
+            document.getElementById('composeInput').value = '';
+            document.getElementById('generatedArea').innerHTML = '';
+            // separate 模式下每个句子独立分析，清空全局同义词信息
+            const synonymsMode = document.querySelector('input[name="synonymsMode"]:checked').value;
+            if (synonymsMode === 'separate') {
+                currentSynonymsInfo = null;
+            }
+            processNextInQueue();
+        }
+
+        function processNextInQueue() {
+            if (!analyzeQueue.length) return;
+            const item = analyzeQueue.shift();
+            const sentence = typeof item === 'string' ? item : item.sentence;
+            const word = typeof item === 'string' ? null : item.word;
+            const synonymsInfo = typeof item === 'string' ? null : (item.synonymsInfo || null);
+            // 有同义词信息 且 有缓存的辨析 则复用，省掉后续句子的近义词生成 token
+            // 注意：separate 模式下 synonymsInfo 为 null，不会复用缓存
+            const reuseSynonyms = (synonymsInfo && cachedSynonymsAnalysis) ? cachedSynonymsAnalysis : null;
+            // 在 textarea 上方显示原句（目标词含变形高亮）
+            currentSentenceForHighlight = sentence;
+            const inputArea = document.querySelector('.input-area');
+            const existing = document.getElementById('highlightedSentence');
+            if (existing) existing.remove();
+            const targetWord = word || sentence;
+            const pattern = targetWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(`(${pattern})`, 'g');
+            const highlighted = sentence.replace(regex, '<span class="highlight-target">$1</span>');
+            const div = document.createElement('div');
+            div.id = 'highlightedSentence';
+            div.style.cssText = 'padding:10px 15px;background:#f5f3ff;border-radius:8px;margin-bottom:8px;font-size:16px;line-height:1.6;';
+            div.innerHTML = highlighted;
+            inputArea.insertBefore(div, inputArea.firstChild);
+            document.getElementById('sentenceInput').value = sentence;
+            const done = queueTotal - analyzeQueue.length;
+            document.getElementById('sentenceCount').textContent = `已分析句子: ${sentenceCount}（队列 ${done}/${queueTotal}）`;
+            analyzeSentence(sentence, word, synonymsInfo, reuseSynonyms);
+        }
+
+        function updateSentenceCount() {
+            const base = `已分析句子: ${sentenceCount}`;
+            document.getElementById('sentenceCount').textContent = analyzeQueue.length > 0
+                ? `${base}（队列 ${queueTotal - analyzeQueue.length}/${queueTotal}）`
+                : base;
+        }
+
+        // 支持回车键提交
+        document.getElementById('sentenceInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                analyzeSentence();
+            }
+        });
+
+        // 根据输入单词数量显示/隐藏近义词模式选项
+        document.getElementById('composeInput').addEventListener('input', function() {
+            const words = this.value.split('/').map(w => w.trim()).filter(w => w);
+            document.getElementById('synonymsModeRow').style.display = words.length >= 2 ? 'block' : 'none';
+        });
+
+        // 启动时检查可恢复会话
+        fetch('/recover_sessions')
+            .then(r => r.json())
+            .then(sessions => {
+                const dismissed = new Set(JSON.parse(localStorage.getItem('dismissedSessions') || '[]'));
+                const visible = sessions.filter(s => !dismissed.has(s.session_id));
+                if (!visible.length) return;
+                const list = document.getElementById('recoverList');
+                list.innerHTML = visible.map(s => {
+                    const t = new Date(s.start_time).toLocaleString('zh-CN');
+                    return `<div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+                        <span style="color:#713f12;font-size:14px;">🕐 ${t}，共 ${s.sentence_count} 句</span>
+                        <button onclick="recoverSession('${s.session_id}', ${s.sentence_count})" style="background:#f59e0b;color:white;padding:5px 14px;font-size:13px;border-radius:6px;border:none;cursor:pointer;">恢复</button>
+                        <button onclick="dismissSession('${s.session_id}', this)" style="background:#9ca3af;color:white;padding:5px 14px;font-size:13px;border-radius:6px;border:none;cursor:pointer;">忽略</button>
+                    </div>`;
+                }).join('');
+                document.getElementById('recoverBanner').style.display = 'block';
+            })
+            .catch(() => {});
+
+        function checkBannerEmpty() {
+            const list = document.getElementById('recoverList');
+            if (!list.children.length) document.getElementById('recoverBanner').style.display = 'none';
+        }
+
+        function dismissSession(id, btn) {
+            const dismissed = new Set(JSON.parse(localStorage.getItem('dismissedSessions') || '[]'));
+            dismissed.add(id);
+            localStorage.setItem('dismissedSessions', JSON.stringify([...dismissed]));
+            fetch('/dismiss_session', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({session_id: id})
+            }).then(() => {
+                btn.closest('div').remove();
+                checkBannerEmpty();
+            });
+        }
+
+        function recoverSession(id, count) {
+            const dismissed = new Set(JSON.parse(localStorage.getItem('dismissedSessions') || '[]'));
+            dismissed.delete(id);
+            localStorage.setItem('dismissedSessions', JSON.stringify([...dismissed]));
+            sessionId = id;
+            sentenceCount = count;
+            updateUI(true);
+            updateSentenceCount();
+            document.getElementById('recoverBanner').style.display = 'none';
+            document.getElementById('resultArea').innerHTML = '';
+        }
+    </script>
+</body>
+</html>

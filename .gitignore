@@ -1,0 +1,10 @@
+exports/
+*.pyc
+__pycache__/
+.env
+.DS_Store
+venv/
+*.txt
+!requirements.txt
+!sample/*.txt
+config.txt
